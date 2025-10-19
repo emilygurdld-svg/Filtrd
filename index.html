@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Filtrd - Your Personal Movie Tracker</title>
+    <title>Reelt - Your Movie Tracker</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase v9 Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -15,51 +20,22 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Lucide React icons as inline SVG components
-        const Film = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                <line x1="7" y1="2" x2="7" y2="22"></line>
-                <line x1="17" y1="2" x2="17" y2="22"></line>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <line x1="2" y1="7" x2="7" y2="7"></line>
-                <line x1="2" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="22" y2="17"></line>
-                <line x1="17" y1="7" x2="22" y2="7"></line>
-            </svg>
-        );
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyArAtWif6I_nJ01WZeZDzSPVvxlxzkXNkc",
+            authDomain: "reelt-2d5f8.firebaseapp.com",
+            projectId: "reelt-2d5f8",
+            storageBucket: "reelt-2d5f8.firebasestorage.app",
+            messagingSenderId: "50248743721",
+            appId: "1:50248743721:web:e63f7193a3197cf3cb9538"
+        };
 
-        const Check = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-        );
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
 
-        const X = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        );
-
-        const Star = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-        );
-
-        const ChevronLeft = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-        );
-
-        const Search = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-            </svg>
-        );
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
         const TMDB_API_KEY = '4b55db8829970a468aa506463e920476';
         const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -71,86 +47,196 @@
             10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western'
         };
 
-        function MovieSwipeApp() {
+        // Simple Icons
+        const Film = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+            </svg>
+        );
+
+        const Check = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        );
+
+        const X = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const Star = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+        );
+
+        function ReeltApp() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
             const [view, setView] = useState('home');
             const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
             const [seenMovies, setSeenMovies] = useState([]);
             const [unseenMovies, setUnseenMovies] = useState([]);
-            const [selectedMovie, setSelectedMovie] = useState(null);
-            const [filterGenre, setFilterGenre] = useState('all');
-            const [searchTerm, setSearchTerm] = useState('');
-            const [sortBy, setSortBy] = useState('title');
             const [allMovies, setAllMovies] = useState([]);
-            const [isLoading, setIsLoading] = useState(false);
             const [currentPage, setCurrentPage] = useState(1);
-            const [hasLoadedAPI, setHasLoadedAPI] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            const [movieNews, setMovieNews] = useState([]);
 
+            // Auth
+            const [authMode, setAuthMode] = useState('login');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [username, setUsername] = useState('');
+            const [authError, setAuthError] = useState('');
+
+            // Swipe state
             const [startX, setStartX] = useState(0);
-            const [startY, setStartY] = useState(0);
             const [currentX, setCurrentX] = useState(0);
-            const [currentY, setCurrentY] = useState(0);
             const [isDragging, setIsDragging] = useState(false);
-            const [isAnimatingOut, setIsAnimatingOut] = useState(false);
-            const [swipeDirection, setSwipeDirection] = useState(null);
+            const [isAnimating, setIsAnimating] = useState(false);
+            const [swipeDir, setSwipeDir] = useState(null);
 
             const currentMovie = allMovies[currentMovieIndex];
-            const nextMovie = allMovies[currentMovieIndex + 1];
-            const thirdMovie = allMovies[currentMovieIndex + 2];
+            const offsetX = isDragging ? currentX - startX : (isAnimating ? (swipeDir === 'right' ? 1500 : -1500) : 0);
 
-            const offsetX = isDragging ? currentX - startX : (isAnimatingOut ? (swipeDirection === 'right' ? 1500 : -1500) : 0);
-            const offsetY = isDragging ? currentY - startY : (isAnimatingOut ? 100 : 0);
-            const rotation = offsetX * 0.1;
+            // Listen for auth changes
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged((user) => {
+                    setUser(user);
+                    setLoading(false);
+                    if (user) {
+                        loadUserData(user.uid);
+                    }
+                });
+                return unsubscribe;
+            }, []);
+
+            // Load user data from Firestore
+            const loadUserData = async (userId) => {
+                try {
+                    const doc = await db.collection('users').doc(userId).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        setSeenMovies(data.seenMovies || []);
+                        setUnseenMovies(data.unseenMovies || []);
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
+            };
+
+            // Save user data to Firestore
+            const saveUserData = async () => {
+                if (!user) return;
+                try {
+                    await db.collection('users').doc(user.uid).set({
+                        seenMovies,
+                        unseenMovies,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error saving:', error);
+                }
+            };
+
+            // Save when movies change
+            useEffect(() => {
+                if (user && (seenMovies.length > 0 || unseenMovies.length > 0)) {
+                    saveUserData();
+                }
+            }, [seenMovies, unseenMovies]);
+
+            const handleSignUp = async (e) => {
+                e.preventDefault();
+                setAuthError('');
+                try {
+                    const result = await auth.createUserWithEmailAndPassword(email, password);
+                    await result.user.updateProfile({ displayName: username });
+                    await db.collection('users').doc(result.user.uid).set({
+                        username,
+                        email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setView('home');
+                } catch (error) {
+                    setAuthError(error.message);
+                }
+            };
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setAuthError('');
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    setView('home');
+                } catch (error) {
+                    setAuthError(error.message);
+                }
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await auth.signOut();
+                    setSeenMovies([]);
+                    setUnseenMovies([]);
+                    setView('home');
+                } catch (error) {
+                    console.error('Error logging out:', error);
+                }
+            };
 
             useEffect(() => {
-                if (view === 'swipe' && !hasLoadedAPI && allMovies.length === 0) {
-                    loadMoreMovies();
-                    setHasLoadedAPI(true);
-                }
-            }, [view, hasLoadedAPI, allMovies.length]);
+                loadMovieNews();
+            }, []);
 
             useEffect(() => {
-                if (view === 'swipe' && currentMovieIndex > allMovies.length - 5 && !isLoading && allMovies.length > 0) {
-                    loadMoreMovies();
+                if (view === 'swipe' && allMovies.length === 0) {
+                    loadMovies();
                 }
-            }, [currentMovieIndex, allMovies.length, isLoading, view]);
+            }, [view]);
 
-            const loadMoreMovies = async () => {
+            useEffect(() => {
+                if (view === 'swipe' && currentMovieIndex > allMovies.length - 5 && !isLoading) {
+                    loadMovies();
+                }
+            }, [currentMovieIndex]);
+
+            const loadMovieNews = async () => {
+                try {
+                    const response = await fetch(`${TMDB_BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}&page=1`);
+                    const data = await response.json();
+                    setMovieNews(data.results.slice(0, 3));
+                } catch (error) {
+                    console.error('Error loading news:', error);
+                }
+            };
+
+            const loadMovies = async () => {
                 if (isLoading) return;
                 setIsLoading(true);
 
                 try {
-                    console.log('Loading page:', currentPage);
-                    const response = await fetch(
-                        `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${currentPage}`
-                    );
-
-                    if (!response.ok) {
-                        throw new Error('API request failed');
-                    }
-
+                    const response = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${currentPage}`);
                     const data = await response.json();
-                    console.log('Loaded movies:', data.results.length);
 
-                    const newMovies = data.results.map((movie) => {
-                        const genres = movie.genre_ids.map(id => GENRE_MAP[id]).filter(Boolean);
-                        return {
-                            id: `${movie.id}-${currentPage}`,
-                            title: movie.title,
-                            year: movie.release_date ? new Date(movie.release_date).getFullYear() : 'Unknown',
-                            genre: genres[0] || 'Unknown',
-                            director: 'View on TMDB for details',
-                            actors: ['View on TMDB for cast'],
-                            poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '🎬',
-                            imdbId: null,
-                            tmdbId: movie.id
-                        };
-                    });
+                    const movies = data.results.map(m => ({
+                        id: `${m.id}-${currentPage}`,
+                        title: m.title,
+                        year: m.release_date ? new Date(m.release_date).getFullYear() : 'Unknown',
+                        genre: GENRE_MAP[m.genre_ids[0]] || 'Unknown',
+                        poster: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
+                        tmdbId: m.id
+                    }));
 
-                    setAllMovies(prev => [...prev, ...newMovies]);
+                    setAllMovies(prev => [...prev, ...movies]);
                     setCurrentPage(prev => prev + 1);
-                    console.log('Total movies now:', allMovies.length + newMovies.length);
                 } catch (error) {
-                    console.error('Error loading movies:', error);
+                    console.error('Error:', error);
                 } finally {
                     setIsLoading(false);
                 }
@@ -159,13 +245,13 @@
             const handleSwipe = (direction) => {
                 if (!currentMovie) return;
 
-                setSwipeDirection(direction);
-                setIsAnimatingOut(true);
+                setSwipeDir(direction);
+                setIsAnimating(true);
                 setIsDragging(false);
 
                 setTimeout(() => {
                     if (direction === 'right') {
-                        setSeenMovies([...seenMovies, { ...currentMovie, rating: 0, review: '' }]);
+                        setSeenMovies([...seenMovies, currentMovie]);
                     } else {
                         setUnseenMovies([...unseenMovies, currentMovie]);
                     }
@@ -173,276 +259,272 @@
                     setTimeout(() => {
                         setCurrentMovieIndex(currentMovieIndex + 1);
                         setStartX(0);
-                        setStartY(0);
                         setCurrentX(0);
-                        setCurrentY(0);
-                        setIsAnimatingOut(false);
-                        setSwipeDirection(null);
+                        setIsAnimating(false);
+                        setSwipeDir(null);
                     }, 800);
                 }, 500);
             };
 
             const handlePointerDown = (e) => {
                 if (e.target.closest('button')) return;
-
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                setStartX(clientX);
-                setStartY(clientY);
-                setCurrentX(clientX);
-                setCurrentY(clientY);
+                const x = e.touches ? e.touches[0].clientX : e.clientX;
+                setStartX(x);
+                setCurrentX(x);
                 setIsDragging(true);
             };
 
             const handlePointerMove = (e) => {
                 if (!isDragging) return;
-
-                if (e.cancelable) {
-                    e.preventDefault();
-                }
-
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                setCurrentX(clientX);
-                setCurrentY(clientY);
+                if (e.cancelable) e.preventDefault();
+                const x = e.touches ? e.touches[0].clientX : e.clientX;
+                setCurrentX(x);
             };
 
             const handlePointerUp = () => {
                 if (!isDragging) return;
-
-                const dragDistance = currentX - startX;
-
-                if (dragDistance > 120) {
+                const distance = currentX - startX;
+                if (distance > 120) {
                     handleSwipe('right');
-                } else if (dragDistance < -120) {
+                } else if (distance < -120) {
                     handleSwipe('left');
                 } else {
                     setCurrentX(startX);
-                    setCurrentY(startY);
                     setIsDragging(false);
                 }
             };
 
-            const updateRating = (movieId, rating) => {
-                setSeenMovies(seenMovies.map(m =>
-                    m.id === movieId ? { ...m, rating } : m
-                ));
-            };
-
-            const updateReview = (movieId, review) => {
-                setSeenMovies(seenMovies.map(m =>
-                    m.id === movieId ? { ...m, review } : m
-                ));
-            };
-
-            const getFilteredMovies = (movies) => {
-                let filtered = movies;
-
-                if (filterGenre !== 'all') {
-                    filtered = filtered.filter(m => m.genre === filterGenre);
-                }
-
-                if (searchTerm) {
-                    filtered = filtered.filter(m =>
-                        m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        m.director.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        m.actors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
-                    );
-                }
-
-                return filtered.sort((a, b) => {
-                    if (sortBy === 'title') return a.title.localeCompare(b.title);
-                    if (sortBy === 'year') return b.year - a.year;
-                    if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-                    if (sortBy === 'director') return a.director.localeCompare(b.director);
-                    return 0;
-                });
-            };
-
-            const genres = ['all', ...new Set(allMovies.map(m => m.genre))];
-
-            const MovieCard = ({ movie, style, className, draggable = false }) => (
-                <div
-                    className={`absolute top-0 left-0 right-0 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl p-8 ${className}`}
-                    style={{
-                        ...style,
-                        touchAction: 'none',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none'
-                    }}
-                >
-                    {draggable && offsetX < -50 && !isAnimatingOut && (
-                        <div className="absolute top-12 right-12 text-5xl font-black transform -rotate-12 border-8 border-red-500 text-red-500 px-6 py-3 rounded-xl pointer-events-none">
-                            NOPE
-                        </div>
-                    )}
-
-                    {draggable && offsetX > 50 && !isAnimatingOut && (
-                        <div className="absolute top-12 left-12 text-5xl font-black transform rotate-12 border-8 border-green-500 text-green-500 px-6 py-3 rounded-xl pointer-events-none">
-                            SEEN
-                        </div>
-                    )}
-
-                    <div className="text-center mb-6">
-                        <div className="mb-4 flex justify-center">
-                            {typeof movie.poster === 'string' && movie.poster.startsWith('http') ? (
-                                <img
-                                    src={movie.poster}
-                                    alt={movie.title}
-                                    className="w-48 h-72 object-cover rounded-lg shadow-lg"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'block';
-                                    }}
-                                />
-                            ) : null}
-                            <div className="text-8xl" style={{ display: typeof movie.poster === 'string' && movie.poster.startsWith('http') ? 'none' : 'block' }}>
-                                {typeof movie.poster === 'string' && movie.poster.startsWith('http') ? '🎬' : movie.poster}
-                            </div>
-                        </div>
-                        <h2 className="text-3xl font-bold text-gray-800 mb-2">{movie.title}</h2>
-                        <p className="text-gray-600 text-lg">{movie.year}</p>
-                        {movie.imdbId && (
-                            <a
-                                href={`https://www.imdb.com/title/${movie.imdbId}/`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block mt-2 text-sm text-purple-600 hover:text-purple-700 font-medium underline"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                View on IMDb
-                            </a>
-                        )}
-                        {!movie.imdbId && movie.tmdbId && (
-                            <a
-                                href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block mt-2 text-sm text-purple-600 hover:text-purple-700 font-medium underline"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                View on TMDB
-                            </a>
-                        )}
-                    </div>
-
-                    <div className="space-y-3 mb-8">
-                        <div className="flex items-center gap-2 justify-center">
-                            <span className="font-semibold text-gray-700">Genre:</span>
-                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
-                                {movie.genre}
-                            </span>
-                        </div>
-                        <div className="text-center">
-                            <span className="font-semibold text-gray-700">Director:</span>
-                            <span className="text-gray-600 ml-2">{movie.director}</span>
-                        </div>
-                        <div className="text-center">
-                            <span className="font-semibold text-gray-700">Cast:</span>
-                            <span className="text-gray-600 ml-2">{movie.actors.join(', ')}</span>
-                        </div>
-                    </div>
-
-                    {draggable && (
-                        <>
-                            <div className="flex justify-center gap-6 relative z-20">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSwipe('left');
-                                    }}
-                                    className="bg-red-500 hover:bg-red-600 text-white p-6 rounded-full shadow-lg transition transform hover:scale-110"
-                                >
-                                    <X className="w-8 h-8" />
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSwipe('right');
-                                    }}
-                                    className="bg-green-500 hover:bg-green-600 text-white p-6 rounded-full shadow-lg transition transform hover:scale-110"
-                                >
-                                    <Check className="w-8 h-8" />
-                                </button>
-                            </div>
-
-                            <div className="text-center mt-6 text-gray-500">
-                                {currentMovieIndex + 1} movies swiped
-                            </div>
-                        </>
-                    )}
-                </div>
-            );
-
+            // HOME PAGE
             if (view === 'home') {
                 return (
-                    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-700 to-pink-600 flex items-center justify-center p-4">
-                        <div className="max-w-2xl mx-auto text-center">
-                            <div className="mb-8">
-                                <Film className="w-24 h-24 mx-auto text-white mb-4" />
-                                <h1 className="text-6xl font-bold text-white mb-4">Filtrd</h1>
-                                <p className="text-2xl text-white/90 mb-2">Your Personal Movie Tracker</p>
-                                <p className="text-lg text-white/70">Swipe through thousands of movies. Track what you've seen. Discover what to watch next.</p>
-                            </div>
-
-                            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 mb-8">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-white">
-                                    <div>
-                                        <div className="text-5xl mb-3">👉</div>
-                                        <h3 className="font-bold text-xl mb-2">Swipe Right</h3>
-                                        <p className="text-white/80">Mark movies you've seen</p>
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+                        <nav className="bg-white shadow-sm">
+                            <div className="max-w-7xl mx-auto px-4 py-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <Film className="w-8 h-8 text-indigo-600" />
+                                        <span className="text-2xl font-black text-indigo-600">Reelt</span>
                                     </div>
                                     <div>
-                                        <div className="text-5xl mb-3">👈</div>
-                                        <h3 className="font-bold text-xl mb-2">Swipe Left</h3>
-                                        <p className="text-white/80">Movies you haven't watched</p>
-                                    </div>
-                                    <div>
-                                        <div className="text-5xl mb-3">⭐</div>
-                                        <h3 className="font-bold text-xl mb-2">Rate & Review</h3>
-                                        <p className="text-white/80">Keep track of your favorites</p>
+                                        {user ? (
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-sm text-gray-600">Hey, {user.displayName || user.email}!</span>
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                                                >
+                                                    Logout
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => { setView('auth'); setAuthMode('login'); }}
+                                                    className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                                >
+                                                    Login
+                                                </button>
+                                                <button
+                                                    onClick={() => { setView('auth'); setAuthMode('signup'); }}
+                                                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                                                >
+                                                    Sign Up
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+                        </nav>
 
-                            <button
-                                onClick={() => setView('swipe')}
-                                className="bg-white text-purple-700 px-12 py-4 rounded-full text-xl font-bold shadow-2xl hover:bg-white/90 transition transform hover:scale-105"
-                            >
-                                Start Swiping
-                            </button>
+                        <div className="max-w-6xl mx-auto px-4 py-16">
+                            <div className="text-center mb-16">
+                                <h1 className="text-6xl font-black mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                    Track Every Film<br />You've Ever Seen
+                                </h1>
+                                <p className="text-xl text-gray-600 mb-8">
+                                    Swipe through thousands of movies. Build your watchlist.
+                                </p>
+                                <button
+                                    onClick={() => user ? setView('swipe') : setView('auth')}
+                                    className="px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition"
+                                >
+                                    {user ? 'Start Swiping' : 'Get Started Free'}
+                                </button>
+                            </div>
+
+                            <div className="grid md:grid-cols-3 gap-8 mb-16">
+                                <div className="bg-white p-8 rounded-2xl shadow-sm">
+                                    <div className="text-4xl mb-4">👉</div>
+                                    <h3 className="text-xl font-bold mb-2">Swipe to Track</h3>
+                                    <p className="text-gray-600">Mark movies as seen or unseen</p>
+                                </div>
+                                <div className="bg-white p-8 rounded-2xl shadow-sm">
+                                    <div className="text-4xl mb-4">⭐</div>
+                                    <h3 className="text-xl font-bold mb-2">Rate & Review</h3>
+                                    <p className="text-gray-600">Keep track of your favorites</p>
+                                </div>
+                                <div className="bg-white p-8 rounded-2xl shadow-sm">
+                                    <div className="text-4xl mb-4">📊</div>
+                                    <h3 className="text-xl font-bold mb-2">Your Stats</h3>
+                                    <p className="text-gray-600">Track your viewing history</p>
+                                </div>
+                            </div>
+
+                            {movieNews.length > 0 && (
+                                <div>
+                                    <h2 className="text-3xl font-bold mb-6">Coming Soon</h2>
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        {movieNews.map(movie => (
+                                            <div key={movie.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
+                                                {movie.poster_path && (
+                                                    <img
+                                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                                        alt={movie.title}
+                                                        className="w-full h-64 object-cover"
+                                                    />
+                                                )}
+                                                <div className="p-4">
+                                                    <h3 className="font-bold text-lg mb-2">{movie.title}</h3>
+                                                    <p className="text-sm text-gray-600">{movie.release_date}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
             }
 
-            if (view === 'swipe') {
+            // AUTH PAGE
+            if (view === 'auth') {
                 return (
-                    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-700 to-pink-600 p-4">
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center p-4">
+                        <div className="max-w-md w-full">
+                            <div className="text-center mb-8">
+                                <Film className="w-16 h-16 mx-auto text-white mb-4" />
+                                <h1 className="text-4xl font-black text-white mb-2">Reelt</h1>
+                            </div>
+
+                            <div className="bg-white rounded-2xl shadow-2xl p-8">
+                                <div className="flex gap-2 mb-6">
+                                    <button
+                                        onClick={() => setAuthMode('login')}
+                                        className={`flex-1 py-2 rounded-lg font-medium ${authMode === 'login' ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}
+                                    >
+                                        Login
+                                    </button>
+                                    <button
+                                        onClick={() => setAuthMode('signup')}
+                                        className={`flex-1 py-2 rounded-lg font-medium ${authMode === 'signup' ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}
+                                    >
+                                        Sign Up
+                                    </button>
+                                </div>
+
+                                <form onSubmit={authMode === 'login' ? handleLogin : handleSignUp}>
+                                    {authMode === 'signup' && (
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                            <input
+                                                type="text"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                                required
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                            required
+                                        />
+                                    </div>
+
+                                    {authError && (
+                                        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                                            {authError}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg"
+                                    >
+                                        {authMode === 'login' ? 'Login' : 'Create Account'}
+                                    </button>
+                                </form>
+
+                                <button
+                                    onClick={() => setView('home')}
+                                    className="w-full mt-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                                >
+                                    Back to Home
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // SWIPE PAGE
+            if (view === 'swipe') {
+                if (!user) {
+                    return (
+                        <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl p-8 text-center max-w-md">
+                                <Film className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
+                                <h2 className="text-2xl font-bold mb-4">Login Required</h2>
+                                <p className="text-gray-600 mb-6">Create an account to start tracking movies</p>
+                                <button
+                                    onClick={() => setView('auth')}
+                                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg"
+                                >
+                                    Go to Login
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-600 p-4">
                         <div className="max-w-md mx-auto">
                             <div className="flex items-center justify-between mb-6">
                                 <button
                                     onClick={() => setView('home')}
-                                    className="text-white hover:bg-white/20 p-2 rounded-lg transition"
+                                    className="text-white hover:bg-white/20 px-4 py-2 rounded-lg"
                                 >
-                                    <ChevronLeft className="w-6 h-6" />
+                                    ← Back
                                 </button>
-                                <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                                    <Film className="w-8 h-8" />
-                                    Filtrd
-                                </h1>
+                                <h1 className="text-2xl font-bold text-white">Reelt</h1>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setView('seen')}
-                                        className="bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition"
+                                        className="bg-white/20 text-white px-3 py-1 rounded-lg text-sm"
                                     >
                                         Seen ({seenMovies.length})
                                     </button>
                                     <button
                                         onClick={() => setView('unseen')}
-                                        className="bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur-sm hover:bg-white/30 transition"
+                                        className="bg-white/20 text-white px-3 py-1 rounded-lg text-sm"
                                     >
                                         Unseen ({unseenMovies.length})
                                     </button>
@@ -451,81 +533,93 @@
 
                             {currentMovie ? (
                                 <div
-                                    className="relative h-[600px] cursor-grab active:cursor-grabbing select-none"
-                                    style={{
-                                        touchAction: 'none',
-                                        WebkitUserSelect: 'none',
-                                        WebkitTouchCallout: 'none'
-                                    }}
+                                    className="relative h-[600px] cursor-grab active:cursor-grabbing"
+                                    style={{ touchAction: 'none' }}
                                     onMouseDown={handlePointerDown}
                                     onMouseMove={handlePointerMove}
                                     onMouseUp={handlePointerUp}
-                                    onMouseLeave={() => { if (isDragging) handlePointerUp(); }}
-                                    onTouchStart={(e) => {
-                                        handlePointerDown(e);
-                                    }}
-                                    onTouchMove={(e) => {
-                                        handlePointerMove(e);
-                                    }}
+                                    onTouchStart={handlePointerDown}
+                                    onTouchMove={handlePointerMove}
                                     onTouchEnd={handlePointerUp}
                                 >
-                                    {isAnimatingOut && swipeDirection && (
+                                    {isAnimating && swipeDir && (
                                         <div className="absolute inset-0 flex items-center justify-center z-20">
-                                            <div
-                                                className={`text-8xl font-black transform border-[12px] px-12 py-6 rounded-2xl ${swipeDirection === 'right'
-                                                        ? 'border-green-500 text-green-500 rotate-12'
-                                                        : 'border-red-500 text-red-500 -rotate-12'
-                                                    }`}
-                                            >
-                                                {swipeDirection === 'right' ? 'SEEN!' : 'NOPE!'}
+                                            <div className={`text-7xl font-black border-[12px] px-12 py-6 rounded-2xl ${
+                                                swipeDir === 'right' ? 'border-green-500 text-green-500' : 'border-red-500 text-red-500'
+                                            }`}>
+                                                {swipeDir === 'right' ? 'SEEN!' : 'NOPE!'}
                                             </div>
                                         </div>
                                     )}
 
-                                    {thirdMovie && (
-                                        <MovieCard
-                                            movie={thirdMovie}
-                                            style={{
-                                                transform: 'scale(0.92) translateY(16px)',
-                                                opacity: 0.5,
-                                                zIndex: 1,
-                                                pointerEvents: 'none'
-                                            }}
-                                            className="select-none"
-                                        />
-                                    )}
-
-                                    {nextMovie && (
-                                        <MovieCard
-                                            movie={nextMovie}
-                                            style={{
-                                                transform: 'scale(0.96) translateY(8px)',
-                                                opacity: 0.7,
-                                                zIndex: 2,
-                                                pointerEvents: 'none'
-                                            }}
-                                            className="select-none"
-                                        />
-                                    )}
-
-                                    <MovieCard
-                                        movie={currentMovie}
-                                        draggable={true}
+                                    <div
+                                        className="absolute inset-0 bg-white rounded-2xl shadow-2xl p-8"
                                         style={{
-                                            transform: `translate(${offsetX}px, ${offsetY}px) rotate(${rotation}deg)`,
-                                            transition: isAnimatingOut ? 'transform 0.5s cubic-bezier(0.4, 0.0, 1, 1)' : (isDragging ? 'none' : 'transform 0.3s ease-out'),
-                                            zIndex: 10,
-                                            pointerEvents: 'auto'
+                                            transform: `translateX(${offsetX}px) rotate(${offsetX * 0.05}deg)`,
+                                            transition: isAnimating ? 'transform 0.5s ease-in' : (isDragging ? 'none' : 'transform 0.3s')
                                         }}
-                                        className="select-none"
-                                    />
+                                    >
+                                        {offsetX < -50 && !isAnimating && (
+                                            <div className="absolute top-12 right-12 text-5xl font-black transform -rotate-12 border-8 border-red-500 text-red-500 px-6 py-3 rounded-xl">
+                                                NOPE
+                                            </div>
+                                        )}
+
+                                        {offsetX > 50 && !isAnimating && (
+                                            <div className="absolute top-12 left-12 text-5xl font-black transform rotate-12 border-8 border-green-500 text-green-500 px-6 py-3 rounded-xl">
+                                                SEEN
+                                            </div>
+                                        )}
+
+                                        <div className="text-center mb-6">
+                                            {currentMovie.poster ? (
+                                                <img
+                                                    src={currentMovie.poster}
+                                                    alt={currentMovie.title}
+                                                    className="w-48 h-72 object-cover rounded-lg shadow-lg mx-auto mb-4"
+                                                />
+                                            ) : (
+                                                <div className="w-48 h-72 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                                    <Film className="w-16 h-16 text-indigo-300" />
+                                                </div>
+                                            )}
+                                            <h2 className="text-3xl font-bold mb-2">{currentMovie.title}</h2>
+                                            <p className="text-gray-600 text-lg mb-2">{currentMovie.year}</p>
+                                            <span className="inline-block bg-indigo-100 text-indigo-700 px-4 py-1 rounded-full text-sm">
+                                                {currentMovie.genre}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-center gap-6 mt-8">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSwipe('left');
+                                                }}
+                                                className="bg-red-500 hover:bg-red-600 text-white p-6 rounded-full shadow-lg transition"
+                                            >
+                                                <X className="w-8 h-8" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSwipe('right');
+                                                }}
+                                                className="bg-green-500 hover:bg-green-600 text-white p-6 rounded-full shadow-lg transition"
+                                            >
+                                                <Check className="w-8 h-8" />
+                                            </button>
+                                        </div>
+
+                                        <div className="text-center mt-6 text-gray-500">
+                                            {currentMovieIndex + 1} movies swiped
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="bg-white rounded-2xl shadow-2xl p-12 text-center">
-                                    <Film className="w-16 h-16 mx-auto mb-4 text-purple-600 animate-pulse" />
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading Movies...</h2>
-                                    <p className="text-gray-600 mb-4">Fetching films from TMDB</p>
-                                    {isLoading && <div className="text-sm text-gray-500">This should only take a few seconds...</div>}
+                                <div className="bg-white rounded-2xl p-12 text-center">
+                                    <Film className="w-16 h-16 mx-auto mb-4 text-indigo-600 animate-pulse" />
+                                    <p className="text-gray-600">Loading movies...</p>
                                 </div>
                             )}
                         </div>
@@ -533,176 +627,78 @@
                 );
             }
 
+            // LISTS PAGE
             const moviesToShow = view === 'seen' ? seenMovies : unseenMovies;
-            const filteredMovies = getFilteredMovies(moviesToShow);
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-700 to-pink-600 p-4">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="flex items-center justify-between mb-6">
-                            <button
-                                onClick={() => setView('swipe')}
-                                className="text-white hover:bg-white/20 p-2 rounded-lg transition"
-                            >
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <h1 className="text-3xl font-bold text-white">
-                                {view === 'seen' ? 'Seen Movies' : 'Unseen Movies'} ({moviesToShow.length})
-                            </h1>
-                            <div className="w-10" />
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 mb-4">
-                            <div className="flex flex-wrap gap-3 mb-3">
-                                <div className="flex-1 min-w-[200px]">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60 w-4 h-4" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search movies, directors, actors..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 bg-white/20 text-white placeholder-white/60 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                        />
-                                    </div>
+                <div className="min-h-screen bg-gray-50">
+                    <nav className="bg-white shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 py-4">
+                            <div className="flex justify-between items-center">
+                                <button onClick={() => setView('home')} className="flex items-center gap-2">
+                                    <Film className="w-6 h-6 text-indigo-600" />
+                                    <span className="font-bold text-xl text-indigo-600">Reelt</span>
+                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setView('seen')}
+                                        className={`px-4 py-2 rounded-lg font-medium ${view === 'seen' ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}
+                                    >
+                                        Seen ({seenMovies.length})
+                                    </button>
+                                    <button
+                                        onClick={() => setView('unseen')}
+                                        className={`px-4 py-2 rounded-lg font-medium ${view === 'unseen' ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}
+                                    >
+                                        Unseen ({unseenMovies.length})
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="flex flex-wrap gap-3">
-                                <select
-                                    value={filterGenre}
-                                    onChange={(e) => setFilterGenre(e.target.value)}
-                                    className="px-4 py-2 bg-white/20 text-white rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                >
-                                    {genres.map(g => (
-                                        <option key={g} value={g} className="text-gray-800">
-                                            {g === 'all' ? 'All Genres' : g}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value)}
-                                    className="px-4 py-2 bg-white/20 text-white rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                >
-                                    <option value="title" className="text-gray-800">Sort by Title</option>
-                                    <option value="year" className="text-gray-800">Sort by Year</option>
-                                    {view === 'seen' && <option value="rating" className="text-gray-800">Sort by Rating</option>}
-                                    <option value="director" className="text-gray-800">Sort by Director</option>
-                                </select>
-                            </div>
                         </div>
+                    </nav>
 
-                        <div className="grid gap-4">
-                            {filteredMovies.map(movie => (
-                                <div key={movie.id} className="bg-white rounded-xl shadow-lg p-6">
-                                    <div className="flex gap-4">
-                                        <div className="text-5xl">
-                                            {typeof movie.poster === 'string' && movie.poster.startsWith('http') ? (
-                                                <img src={movie.poster} alt={movie.title} className="w-20 h-28 object-cover rounded shadow" />
-                                            ) : (
-                                                <div>{movie.poster}</div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-xl font-bold text-gray-800 mb-1">{movie.title}</h3>
-                                            <p className="text-gray-600 mb-2">{movie.year} • {movie.genre}</p>
-                                            <p className="text-sm text-gray-500 mb-1">Dir: {movie.director}</p>
-                                            <p className="text-sm text-gray-500 mb-2">Cast: {movie.actors.join(', ')}</p>
-                                            {movie.imdbId && (
-                                                <a
-                                                    href={`https://www.imdb.com/title/${movie.imdbId}/`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-block text-xs text-purple-600 hover:text-purple-700 font-medium underline mb-2"
-                                                >
-                                                    View on IMDb
-                                                </a>
-                                            )}
-                                            {!movie.imdbId && movie.tmdbId && (
-                                                <a
-                                                    href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-block text-xs text-purple-600 hover:text-purple-700 font-medium underline mb-2"
-                                                >
-                                                    View on TMDB
-                                                </a>
-                                            )}
+                    <div className="max-w-7xl mx-auto px-4 py-8">
+                        <h1 className="text-4xl font-bold mb-8">
+                            {view === 'seen' ? 'Movies You\'ve Seen' : 'Movies to Watch'}
+                        </h1>
 
-                                            {view === 'seen' && (
-                                                <div className="mt-4">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-sm font-semibold text-gray-700">Rating:</span>
-                                                        <div className="flex gap-1">
-                                                            {[1, 2, 3, 4, 5].map(star => (
-                                                                <button
-                                                                    key={star}
-                                                                    onClick={() => updateRating(movie.id, star)}
-                                                                    className="transition"
-                                                                >
-                                                                    <Star
-                                                                        className={`w-5 h-5 ${star <= (movie.rating || 0)
-                                                                                ? 'fill-yellow-400 text-yellow-400'
-                                                                                : 'text-gray-300'
-                                                                            }`}
-                                                                    />
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => setSelectedMovie(movie)}
-                                                        className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                                                    >
-                                                        {movie.review ? 'Edit Review' : 'Add Review'}
-                                                    </button>
-
-                                                    {movie.review && (
-                                                        <p className="text-sm text-gray-600 mt-2 italic">"{movie.review}"</p>
-                                                    )}
-                                                </div>
-                                            )}
+                        {moviesToShow.length === 0 ? (
+                            <div className="bg-white rounded-xl p-12 text-center">
+                                <Film className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                                <p className="text-gray-500 mb-4">No movies yet</p>
+                                <button
+                                    onClick={() => setView('swipe')}
+                                    className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg"
+                                >
+                                    Start Swiping
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid md:grid-cols-4 gap-6">
+                                {moviesToShow.map(movie => (
+                                    <div key={movie.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
+                                        {movie.poster ? (
+                                            <img src={movie.poster} alt={movie.title} className="w-full h-64 object-cover" />
+                                        ) : (
+                                            <div className="w-full h-64 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                                                <Film className="w-12 h-12 text-indigo-300" />
+                                            </div>
+                                        )}
+                                        <div className="p-4">
+                                            <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
+                                            <p className="text-sm text-gray-600">{movie.year} • {movie.genre}</p>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {filteredMovies.length === 0 && (
-                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
-                                <p className="text-white text-lg">No movies found</p>
+                                ))}
                             </div>
                         )}
                     </div>
-
-                    {selectedMovie && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-xl max-w-lg w-full p-6">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-4">Review: {selectedMovie.title}</h3>
-                                <textarea
-                                    value={selectedMovie.review}
-                                    onChange={(e) => updateReview(selectedMovie.id, e.target.value)}
-                                    placeholder="Write your review here..."
-                                    className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
-                                />
-                                <button
-                                    onClick={() => setSelectedMovie(null)}
-                                    className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition"
-                                >
-                                    Save Review
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<MovieSwipeApp />);
+        root.render(<ReeltApp />);
     </script>
 </body>
 </html>
